@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Dermatoloji Tedavi Flashcard</title>
+<style>
+:root{--bg:#f6f8fb;--card:#fff;--ink:#172033;--muted:#697386;--accent:#5b5bd6;--accent2:#ececff;--ok:#14805e;--border:#e5e8ef}
+*{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink)}
+.app{max-width:920px;margin:auto;padding:22px 18px 40px}.top{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:18px}.title{font-size:clamp(22px,4vw,34px);font-weight:800}.sub{color:var(--muted);font-size:14px;margin-top:4px}.pill{background:var(--accent2);color:var(--accent);padding:9px 12px;border-radius:999px;font-weight:700;white-space:nowrap}
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0}.toolbar button,.toolbar select{border:1px solid var(--border);background:#fff;border-radius:12px;padding:11px 14px;font-size:15px}.toolbar button{cursor:pointer;font-weight:700}.toolbar button.primary{background:var(--accent);color:white;border-color:var(--accent)}
+.progress{height:8px;background:#e8ebf1;border-radius:99px;overflow:hidden;margin:10px 0 22px}.bar{height:100%;background:var(--accent);width:0;transition:.25s}
+.stage{perspective:1200px;min-height:430px;display:grid;place-items:center}.card{width:min(100%,760px);height:420px;position:relative;transform-style:preserve-3d;transition:transform .45s;cursor:pointer;touch-action:manipulation}.card.flipped{transform:rotateY(180deg)}
+.face{position:absolute;inset:0;backface-visibility:hidden;background:var(--card);border:1px solid var(--border);border-radius:24px;box-shadow:0 16px 50px rgba(26,35,55,.09);padding:34px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center}.back{transform:rotateY(180deg);align-items:flex-start;text-align:left;overflow:auto}.label{font-size:13px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);font-weight:800;margin-bottom:18px}.disease{font-size:clamp(30px,6vw,52px);font-weight:850;line-height:1.08}.hint{margin-top:24px;color:var(--muted);font-size:15px}.tx{font-size:clamp(18px,3vw,25px);line-height:1.55;width:100%}.tx ul{margin:0;padding-left:24px}.tx li{margin:8px 0}.note{margin-top:18px;padding:12px 14px;background:#fff8df;border-radius:12px;font-size:14px;color:#68550a}
+.nav{display:flex;justify-content:center;gap:12px;margin-top:18px}.nav button{min-width:130px;border:0;border-radius:14px;padding:13px 18px;font-size:16px;font-weight:800;background:#fff;box-shadow:0 4px 18px rgba(26,35,55,.07)}.nav button.next{background:var(--accent);color:white}.counter{text-align:center;color:var(--muted);margin-top:12px;font-weight:700}
+@media(max-width:600px){.face{padding:24px}.card{height:470px}.stage{min-height:480px}.nav button{min-width:0;flex:1}.top{align-items:flex-start;flex-direction:column}}
+</style></head>
+<body><main class="app">
+<div class="top"><div><div class="title">Dermatoloji Tedavi Flashcardları</div><div class="sub">Ön: hastalık • Arka: dosyadaki tedavi/reçete notu</div></div><div class="pill" id="countPill"></div></div>
+<div class="toolbar"><button class="primary" id="shuffle">Karıştır</button><button id="reset">Başa dön</button><select id="mode"><option value="all">Tüm kartlar</option><option value="fungal">Mantar ağırlıklı</option><option value="other">Diğer</option></select></div>
+<div class="progress"><div class="bar" id="bar"></div></div>
+<section class="stage"><div class="card" id="card" role="button" tabindex="0" aria-label="Kartı çevir">
+<div class="face front"><div class="label">Hastalık</div><div class="disease" id="front"></div><div class="hint">Tedaviyi görmek için karta dokun</div></div>
+<div class="face back"><div class="label">Tedavi / reçete</div><div class="tx" id="back"></div><div class="hint">Hastalığa dönmek için tekrar dokun</div></div>
+</div></section>
+<div class="nav"><button id="prev">← Önceki</button><button class="next" id="next">Sonraki →</button></div><div class="counter" id="counter"></div>
+</main>
+<script>
+const cards=[
+{d:'Tinea capitis superficialis',c:'fungal',t:['Ketoral şampuan (notta: “5 kez”)','Topikal sprey: 2×1','İtrakonazol (Itraspor) 1×1, yaklaşık 1–2 hafta','Allerset 1×1','Evde temaslılar için koruyucu şampuan notu']},
+{d:'Tinea capitis profunda / Kerion',c:'fungal',t:['Kılları temizle / uzaklaştır','Aynı sistemik + yardımcı yaklaşım (tinea capitis tedavisi)','Parol şurup']},
+{d:'Tinea pedis',c:'fungal',t:['Dermifin krem: 2×1','Terbisil tablet: 1×1','Ürederm: 1×1','Ayakları kuru tut; eşyaları ayır']},
+{d:'Tinea unguium (onikomikoz)',c:'fungal',t:['Terbisil tablet: 1×1, 4–6 ay','Ofloks / tırnak için lokal uygulama notu','Parmak krem: yalnız eşlik eden tinea varsa']},
+{d:'Tinea cruris',c:'fungal',t:['Topikal krem: 2×1','Itrakonazol (Funit): 1×1','Kıvrım yerlerinde hemen elle temas/otokontaminasyona dikkat']},
+{d:'Tinea corporis',c:'fungal',t:['Topikal sprey']},
+{d:'Pitiriyazis versicolor',c:'fungal',t:['Topikal sprey','Funit: 1×1 (notta “yaygın” için)','Ketoral şampuan']},
+{d:'Oral kandidiyazis',c:'fungal',t:['Nistatin oral süspansiyon: 4×1; çalkala-yut','Funit: 1×1','Kloroben gargara: 4×1']},
+{d:'Kızamık',c:'other',t:['Parol','Allerset']},
+{d:'Herpes enfeksiyonu',c:'other',t:['Valasiklovir 1000 mg: 3×1','Parol / Arveles: 2×1','Benzoral tablet: 1×1','Bol su; istirahat; postherpetik nevralji gelişmemesi için takip notu']},
+{d:'Suçiçeği',c:'other',t:['<12 yaş: viral enfeksiyon gibi düşün; Parol + Allerset; notta Fucidin krem de yazılı','Yetişkin: ilk 72 saatte gelirse valasiklovir']},
+{d:'Verruka',c:'other',t:['Kriyoterapi (notta 15 günde bir)','Verrutol solüsyon: 2×1; “fırçalayarak kullan”']},
+{d:'Verruka plana (yaygın)',c:'other',t:['Acnelyse']},
+{d:'İmpetigo',c:'other',t:['Fucidin krem: 3×1','Sistemik ise Augmentin şurup: 1×1','Allerset: 1×1','Kaşımaması önerilir']},
+{d:'Ektima',c:'other',t:['Notta impetigo ile aynı reçete işareti verilmiş']},
+{d:'Folikülit',c:'other',t:['Notta impetigo ile aynı reçete işareti verilmiş']},
+{d:'Erizipel',c:'other',t:['Augmentin tablet','Parol / Arveles','Islak pansuman']},
+{d:'Selülit',c:'other',t:['Notta erizipel ile aynı yaklaşım işareti verilmiş']},
+{d:'Furonkül / karbonkül',c:'other',t:['Notta erizipel ile aynı yaklaşım işareti verilmiş']},
+{d:'Eritrazma',c:'other',t:['Fucidin','Klaritromisin: 1×1']},
+{d:'Plantar verrü',c:'other',t:['TCA','Benzo... (el yazısında ilaç adı tam seçilemiyor)']},
+{d:'Uyuz',c:'other',t:['Antiskabiyal uygulama sonrası 24 saat bekle notu','Kwellada: 2 gün uygulama notu','1 hafta sonra tekrar','Bütün aile birlikte kullanmalı','Çocukta antihistaminik krem → 12 saat bekle']},
+{d:'Pedikülozis capitis',c:'other',t:['Kwellada şampuan','Allerset','Sirke + su ile mekanik temizlik','Banyodan sonra nemli saçı sık tarakla tara; yaklaşık 1 hafta']},
+{d:'Akne vulgaris',c:'other',t:['Nodül/kistik: Zoretanin veya Tetradox + Acnelyse 1×1 (notta en az 3 ay)','Hafif: Benzoxin + Acnelyse; gece kullanımı, güneş kremi','Şiddetli: Zoretanin 20 mg başla']},
+{d:'Rozasea',c:'other',t:['Yüz temizliği + güneş kremi + nemlendirici','Rozavel: 1×1 gece','Şiddetli: Tetradox ekle','Allerset: 1×1']},
+{d:'Miliaria rubra',c:'other',t:['Obzinc','Allerset']},
+{d:'Diaper dermatit',c:'other',t:['Oksizinc','Hipokort','Allerset']},
+{d:'Atopik egzama',c:'other',t:['Hipokort','Ürederm lipo %5','Allerset']},
+{d:'Ev kadını egzaması',c:'other',t:['Momecon: 3 gün','Dermovate: 3 gün','Yüz/bebek için Hipokort notu']},
+{d:'Seboreik dermatit',c:'other',t:['Hipokort','Allerset']},
+{d:'Saçlı deri seboreik dermatit',c:'other',t:['Excipial solüsyon','Allerset','Ketoral şampuan']},
+{d:'Liken simpleks',c:'other',t:['Momecon','Allerset','Ürederm lipo']},
+{d:'Psoriasis',c:'other',t:['Dermovate','Ürederm lipo','Allerset']},
+{d:'Liken planus',c:'other',t:['Bu sayfada tedavi ayrıntısı yazılmamış.']},
+{d:'Pitiriyazis rosea',c:'other',t:['Momecon','Ürederm lipo','Allerset','Kese yapma; kaşımamaya dikkat notu']},
+{d:'Alopesi areata',c:'other',t:['Bebek/çocuk/kadın: Minoksidil %5 1×1','Erkek: Minoksidil 2×1','Dermovate losyon: 1×1','Notta uygulamalar için “1 hafta biri, 1 hafta biri” ifadesi var']},
+{d:'Akut paronişi',c:'other',t:['Fucidin krem','Augmentin','Apse varsa boşalt']},
+{d:'Verrü (genel)',c:'other',t:['Kriyoterapi','Ürederm %10 solüsyon notu']},
+{d:'Polimorf ışık erüpsiyonu',c:'other',t:['Hipokort','Allerset']},
+{d:'Vitiligo',c:'other',t:['Hipokort','Elidel krem','Protopic (takrolimus) notu','Güneşsizlik / fotoproteksiyon notu']},
+{d:'Melazma',c:'other',t:['Excipial / bakım ürünü notu','Hipokort 1×1','Acnelyse','Karışık gece sür; 3 aydan fazla kullanma notu']},
+{d:'Ürtiker',c:'other',t:['Atarax / Allerset: 1×1','Gerekirse dozun 4’e kadar çıkarılabileceği not edilmiş','Atarax uyku yapar']}
+];
+let pool=[...cards],i=0;
+const card=document.getElementById('card'),front=document.getElementById('front'),back=document.getElementById('back'),counter=document.getElementById('counter'),bar=document.getElementById('bar'),pill=document.getElementById('countPill');
+function render(){card.classList.remove('flipped');const x=pool[i];front.textContent=x.d;back.innerHTML='<ul>'+x.t.map(v=>'<li>'+v+'</li>').join('')+'</ul><div class="note">Bu kartlar yüklediğin 14 Eylül notundaki ifadeleri çalışma amacıyla aktarır; klinik reçete yerine kullanılmamalıdır.</div>';counter.textContent=(i+1)+' / '+pool.length;bar.style.width=((i+1)/pool.length*100)+'%';pill.textContent=pool.length+' kart'}
+card.onclick=()=>card.classList.toggle('flipped');card.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();card.classList.toggle('flipped')}};
+document.getElementById('next').onclick=()=>{i=(i+1)%pool.length;render()};document.getElementById('prev').onclick=()=>{i=(i-1+pool.length)%pool.length;render()};
+document.getElementById('shuffle').onclick=()=>{for(let j=pool.length-1;j>0;j--){let k=Math.floor(Math.random()*(j+1));[pool[j],pool[k]]=[pool[k],pool[j]]}i=0;render()};
+document.getElementById('reset').onclick=()=>{i=0;render()};document.getElementById('mode').onchange=e=>{pool=e.target.value==='all'?[...cards]:cards.filter(x=>x.c===e.target.value);i=0;render()};
+render();
+</script></body></html>
